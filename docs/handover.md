@@ -7,19 +7,21 @@
 
 ## 현재 상태 (2026-07-10)
 
-**페이즈: P0 파운데이션 — 진행 중**
+**페이즈: P0 완료 → P1 착수**
 
-### 완료
-- [x] 설계/스펙 확정 및 문서화 (docs/ 4종: system_spec, llm_pipeline, mobile_architecture, roadmap — 오너 승인 완료)
-- [x] 모노레포 구성: 루트 git init(main), dubbyServer/.git 제거(커밋 없었음), .gitignore, CLAUDE.md
-- [x] 원격: https://github.com/zapzookj/Dubby.git
+### 완료 (P0)
+- [x] 설계/스펙 확정 및 문서화 (docs/ 4종 — 오너 승인 완료). 원격: https://github.com/zapzookj/Dubby.git
+- [x] 백엔드 파운데이션: Boot 4.1 의존성(**spring-boot-starter-flyway 필수** — flyway-core만으론 자동구성 안 됨), yml 3종 + DubbyProperties(상수 총람), Flyway V1(전체 스키마), SecurityConfig(JWT)+공통 에러(ErrorCode/DerbyCopy), POST /auth/device, GET·PATCH /settings, DELETE /users/me
+- [x] 백엔드 DoD 실검증 통과: 멱등 등록/재로그인, 401 공통 포맷, 닉네임 12자·타임존 24h 가드, 계정 삭제 후 신규 발급, Flyway clean-DB 통과
+- [x] 모바일 파운데이션: Expo SDK 57(default 템플릿, **라우트가 src/app/ — 문서의 루트 app/과 다름, 템플릿 컨벤션 따름**), 테마 토큰/copy.ts, api client(fetch+401 재인증 뮤텍스), 스토어 3종, 공용 컴포넌트(Screen/JankyButton/JankyCard/DerbyAvatar/DerbyLoading/DerbyErrorView/DerbyToast), 온보딩(타이핑 4스텝), 홈 임시판(헬스체크 표시), tsc + expo-doctor 20/20 통과
 
-### 진행 중
-- [ ] P0 백엔드: build.gradle 의존성, DubbyProperties, Flyway V1, 인증(/auth/device), 공통 에러, settings, 계정 삭제
-- [ ] P0 모바일: create-expo-app 스캐폴드, 테마/공용 컴포넌트, api client
+### 진행 중 (P1)
+- [ ] 시딩 파이프라인(tools/seed/build_seed.mjs → R__seed_templates.sql) + 60개 템플릿
+- [ ] TemplatePicker + GET /tasks/today(lazy 배정) + reaction/save/share + GET /home
+- [ ] 모바일: 홈 실장(GET /home), 업무 리스트/상세, 설정 화면+이스터에그
 
 ### 다음 작업
-- P0 잔여 → P1 (시딩 파이프라인 + 오늘의 업무 + 홈 + UX 셸)
+- P1 완료 후 → P2 (채팅+LLM+일기장, SPIKE-A 선행)
 
 ---
 
@@ -48,4 +50,7 @@
 
 ## 미해결 / 주의
 
-- (없음)
+1. **Android 에뮬레이터 로컬 실행 불가 (환경 이슈, 코드 무관)**: AVD `Medium_Phone_API_36.0` 기동 시 "too many emulator instances" abort → `-port 5560 -feature -Netsim`으로 우회하면 부팅은 시작되나 adb에 디바이스가 영영 안 잡힘(QEMU 멈춤 추정). 소프트웨어 GL(opengl32sw) 로드 실패 경고도 있음. **머신 재부팅 또는 Android Studio에서 AVD 재생성 후 재시도 권장** (오너 액션). 앱 검증은 tsc/expo-doctor + 백엔드 API 실검증으로 대체 완료. 실기기+Expo Go로도 확인 가능(`npx expo start` 후 QR).
+2. **더비 표정 PNG 8종 미수급**: DerbyAvatar는 이모지 폴백으로 구현됨. PNG 수급 시 `dubbyMobile/src/components/DerbyAvatar.tsx` 한 파일만 교체하면 됨 (컴포넌트 계약 유지).
+3. **외부 트랙 미착수 (오너 액션 필요)**: Apple Developer / Google Play Console 계정, RevenueCat 프로젝트, EAS 프로젝트 생성. P4(수익화) 전까지 필요.
+4. react-native-purchases는 P4에서 설치 예정 (설치 시 Expo Go 불가 → dev build 필요해지므로 미룸).
