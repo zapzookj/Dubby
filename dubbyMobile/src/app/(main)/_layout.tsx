@@ -23,6 +23,10 @@ export default function MainLayout() {
       <Stack.Screen name="tasks/index" options={{ title: '오늘의 업무 보고' }} />
       <Stack.Screen name="tasks/[assignmentId]" options={{ title: '업무 상세' }} />
       <Stack.Screen name="tasks/saved" options={{ title: '공식 흑역사 기록' }} />
+      <Stack.Screen name="chat/index" options={{ title: '더비와 협의하기' }} />
+      <Stack.Screen name="chat/exhausted" options={{ title: '더비 과로 안내' }} />
+      <Stack.Screen name="diary/index" options={{ title: '더비의 일기장' }} />
+      <Stack.Screen name="diary/[entryId]" options={{ title: '더비의 기억' }} />
       <Stack.Screen name="settings" options={{ title: '설정' }} />
     </Stack>
   );

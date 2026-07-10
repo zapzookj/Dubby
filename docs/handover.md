@@ -21,15 +21,26 @@
 - [x] 백엔드 DoD 실검증 11개 시나리오 통과
 - [x] 모바일: 홈 실장(상태카드+메뉴그리드+미반응 배지), 업무 리스트/상세(반응버튼→후속 말풍선, RETRY 소진은 개그로 표시), 도감 저장/공유(ViewShot 이미지 캡처+텍스트 폴백), 저장 목록(무한스크롤), 설정(닉네임/이스터에그 3종/RunawayButton/계정삭제 이중확인). 채팅/일기/월급 메뉴는 "준비 중" 토스트. tsc 통과
 
-### 진행 중 (P2) — 채팅 + LLM + 일기장
-- [ ] SPIKE-A: OpenRouter 페르소나 검증 (tools/persona/, 회귀 세트 30개) — **OPENROUTER_API_KEY 필요 (오너 제공 필요, .env)**
-- [ ] infra/llm 모듈 (OpenRouterClient, ModelRouter, PromptFactory, SafetyFilter, OutputValidator, 예산)
-- [ ] prompts/v1/*.md 리소스
-- [ ] ChatQuotaService(원자 차감/환불) + POST /chat/messages(멱등키) + 일기 파이프라인
-- [ ] 모바일: 채팅 화면(kind 분기, SafetyNoticeCard), 과로 화면, 일기장
+### 완료 (P2) — 채팅 + LLM + 일기장
+- [x] infra/llm: LlmClient 인터페이스 + **OpenRouterClient(운영) / MockLlmClient(로컬 기본, `dubby.llm.mock`)**. 프롬프트는 `resources/prompts/v1/*.md` (local 프로파일 핫리로드 — 재시작 없이 튜닝)
+- [x] 채팅: 원자적 쿼터 선차감/환불, clientMessageId 멱등, 동시성 가드, 오해강도(Lv1/Lv2, 연속 Lv2 방지), 안전 2중(사전 정규식 safety-keywords.yml + 모델 자기신고), OOC 검증+1회 교정, 429 확장 필드(resetsAt/paywallHint)
+- [x] 일기: 채팅 합승 후보(게이트: 자기서술 패턴/민감어/일일상한/빈도) → approve/reject → 실삭제 CRUD/공유. rewrite는 SALARY 게이트(403, LLM 연결은 P4)
+- [x] 모바일: 채팅 화면(세션 아이템 방식, kind 분기, SafetyNoticeCard 중립 카드, 일기 후보 카드, 에러 시 동일 cmid 재시도), 과로 화면, 일기장 리스트/상세/삭제/공유, 홈 메뉴 연결
+- [x] DoD: mock LLM으로 15개 백엔드 시나리오 통과, tsc 통과
+- [x] tools/persona/: SPIKE-A 회귀 실행기(run_regression.mjs) + 세트 30케이스 준비 완료
 
-### 다음 작업
-- P2 완료 후 → P3 (푸시 — P2와 병렬 가능)
+### ⚠ SPIKE-A 미완 (오너 액션 필요)
+실모델 페르소나 검증은 **OPENROUTER_API_KEY가 필요**해 보류 중. 절차:
+`OPENROUTER_API_KEY=sk-... node tools/persona/run_regression.mjs` → 결과 파일(tools/persona/results/) 오너 검수(기준: 오해+OOC없음 24/30, json 30/30) → 채택 모델을 application.yml `dubby.llm.routing`에 반영 → 서버는 `LLM_MOCK=false` + 키로 실모델 전환.
+**P4(수익화) 전까지만 완료되면 출시 크리티컬 패스에 영향 없음.**
+
+### 다음 작업 (P3 — 푸시)
+- [ ] POST /push/tokens(멱등 upsert)/tokens/delete, GET·PUT /push/settings
+- [ ] PushDispatchScheduler(10분 폴링, PENDING 선삽입 ON CONFLICT, 지터, quiet 가드) + ExpoPushClient(100건 청크, 티켓 DeviceNotRegistered 즉시 무효화) + PushReceiptScheduler
+- [ ] POST /push/logs/{id}/open, POST /admin/push/test(local 전용)
+- [ ] 모바일: expo-notifications 권한 흐름(온보딩 프리 프롬프트 연결), 토큰 등록, 딥링크 라우팅(콜드스타트 pendingDeepLink), 설정 알림 토글 연결
+- [ ] SPIKE-B: 실기기 푸시 수신 (오너 실기기 필요)
+- 이후 P4(수익화 — 스토어/RC 계정 필요), P5(출시)
 
 ---
 

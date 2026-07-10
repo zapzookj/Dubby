@@ -53,14 +53,15 @@ export default function HomeScreen() {
             emoji="💬"
             title="더비와 협의"
             subtitle={`남은 협의 ${chatQuota.remaining}회`}
-            onPress={comingSoon}
+            onPress={() => router.push(chatQuota.remaining === 0 ? '/chat/exhausted' : '/chat')}
           />
           <MenuTile
             seed="menu-diary"
             emoji="📔"
             title="더비의 일기장"
+            badge={diary.pendingCandidates > 0 ? `${diary.pendingCandidates}` : undefined}
             subtitle={diary.totalEntries > 0 ? `${diary.totalEntries}개의 기억` : '아직 백지'}
-            onPress={comingSoon}
+            onPress={() => router.push('/diary')}
           />
           <MenuTile
             seed="menu-saved"
