@@ -15,13 +15,21 @@
 - [x] 백엔드 DoD 실검증 통과: 멱등 등록/재로그인, 401 공통 포맷, 닉네임 12자·타임존 24h 가드, 계정 삭제 후 신규 발급, Flyway clean-DB 통과
 - [x] 모바일 파운데이션: Expo SDK 57(default 템플릿, **라우트가 src/app/ — 문서의 루트 app/과 다름, 템플릿 컨벤션 따름**), 테마 토큰/copy.ts, api client(fetch+401 재인증 뮤텍스), 스토어 3종, 공용 컴포넌트(Screen/JankyButton/JankyCard/DerbyAvatar/DerbyLoading/DerbyErrorView/DerbyToast), 온보딩(타이핑 4스텝), 홈 임시판(헬스체크 표시), tsc + expo-doctor 20/20 통과
 
-### 진행 중 (P1)
-- [ ] 시딩 파이프라인(tools/seed/build_seed.mjs → R__seed_templates.sql) + 60개 템플릿
-- [ ] TemplatePicker + GET /tasks/today(lazy 배정) + reaction/save/share + GET /home
-- [ ] 모바일: 홈 실장(GET /home), 업무 리스트/상세, 설정 화면+이스터에그
+### 완료 (P1)
+- [x] 시딩 파이프라인: tools/seed/build_seed.mjs → R__seed_templates.sql (75개: 업무30/푸시30/홈상태15). **docs 마크다운이 콘텐츠 SSOT** — 템플릿 수정 절차: docs 편집 → `node tools/seed/build_seed.mjs` → 커밋 (생성 SQL 직접 수정 금지). 홈 상태 문구는 신규 문서 docs/derby_home_status_v1.md
+- [x] 백엔드: TemplatePicker(쿨다운/가중셔플/카테고리회피/2단계 완화), /tasks/today lazy 배정(ON CONFLICT 멱등), reaction(4종 덮어쓰기, RETRY max=2)/save/share/saved, /home(HOME_STATUS 시드고정+정확도+mood), derby-defaults.yml(버튼 문구 풀), app_events+user_activity_daily
+- [x] 백엔드 DoD 실검증 11개 시나리오 통과
+- [x] 모바일: 홈 실장(상태카드+메뉴그리드+미반응 배지), 업무 리스트/상세(반응버튼→후속 말풍선, RETRY 소진은 개그로 표시), 도감 저장/공유(ViewShot 이미지 캡처+텍스트 폴백), 저장 목록(무한스크롤), 설정(닉네임/이스터에그 3종/RunawayButton/계정삭제 이중확인). 채팅/일기/월급 메뉴는 "준비 중" 토스트. tsc 통과
+
+### 진행 중 (P2) — 채팅 + LLM + 일기장
+- [ ] SPIKE-A: OpenRouter 페르소나 검증 (tools/persona/, 회귀 세트 30개) — **OPENROUTER_API_KEY 필요 (오너 제공 필요, .env)**
+- [ ] infra/llm 모듈 (OpenRouterClient, ModelRouter, PromptFactory, SafetyFilter, OutputValidator, 예산)
+- [ ] prompts/v1/*.md 리소스
+- [ ] ChatQuotaService(원자 차감/환불) + POST /chat/messages(멱등키) + 일기 파이프라인
+- [ ] 모바일: 채팅 화면(kind 분기, SafetyNoticeCard), 과로 화면, 일기장
 
 ### 다음 작업
-- P1 완료 후 → P2 (채팅+LLM+일기장, SPIKE-A 선행)
+- P2 완료 후 → P3 (푸시 — P2와 병렬 가능)
 
 ---
 

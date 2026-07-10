@@ -20,6 +20,10 @@ export default function MainLayout() {
         contentStyle: { backgroundColor: colors.background },
       }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="tasks/index" options={{ title: '오늘의 업무 보고' }} />
+      <Stack.Screen name="tasks/[assignmentId]" options={{ title: '업무 상세' }} />
+      <Stack.Screen name="tasks/saved" options={{ title: '공식 흑역사 기록' }} />
+      <Stack.Screen name="settings" options={{ title: '설정' }} />
     </Stack>
   );
 }
