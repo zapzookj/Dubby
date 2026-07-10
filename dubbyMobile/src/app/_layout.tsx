@@ -12,6 +12,7 @@ import { DerbyLoading } from '@/components/DerbyLoading';
 import { DerbyToastHost } from '@/components/DerbyToast';
 import { handleNotificationResponse } from '@/notifications/router';
 import { silentReRegister } from '@/notifications/setup';
+import { configurePurchases } from '@/purchases/revenuecat';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useAppStateHydrated } from '@/stores/useAppStateHydrated';
@@ -29,10 +30,13 @@ export default function RootLayout() {
     return wireAppStateFocus();
   }, [bootstrap]);
 
-  // 푸시: 토큰 재등록(멱등) + 탭 라우팅 (실행 중/콜드 스타트 양 경로)
+  const userId = useAuthStore((s) => s.userId);
+
+  // 푸시: 토큰 재등록(멱등) + 탭 라우팅 (실행 중/콜드 스타트 양 경로) + RevenueCat 초기화
   useEffect(() => {
     if (authStatus !== 'guest') return;
     silentReRegister();
+    if (userId) configurePurchases(userId).catch(() => {});
     Notifications.getLastNotificationResponseAsync().then((response) => {
       if (response) setPendingDeepLink(handleNotificationResponse(response));
     });
@@ -40,7 +44,7 @@ export default function RootLayout() {
       setPendingDeepLink(handleNotificationResponse(response));
     });
     return () => sub.remove();
-  }, [authStatus, setPendingDeepLink]);
+  }, [authStatus, userId, setPendingDeepLink]);
 
   useEffect(() => {
     if (authStatus !== 'loading' && hydrated) {
@@ -78,6 +82,14 @@ function Gate({
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(main)" />
       <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+      <Stack.Screen
+        name="salary"
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          title: '더비 월급',
+        }}
+      />
     </Stack>
   );
 }

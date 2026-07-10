@@ -1,13 +1,13 @@
 import type { PropsWithChildren } from 'react';
 import { useMemo } from 'react';
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors, jankyTilt, radii, spacing } from '@/theme/tokens';
 
 interface JankyCardProps extends PropsWithChildren {
   /** 기울기 시드 — 항목 id. 결정적이어야 한다 (리렌더마다 흔들리면 진짜 버그처럼 보임) */
   seed: string | number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 /** 흰 카드 + 굵은 외곽선 + 마스킹테이프 장식 + ±0.5° 결정적 기울기 */

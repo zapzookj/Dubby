@@ -1,5 +1,6 @@
 package com.spring.dubbyserver.domain.task;
 
+import com.spring.dubbyserver.domain.billing.BillingService;
 import com.spring.dubbyserver.domain.metrics.AppEventRecorder;
 import com.spring.dubbyserver.domain.task.DailyTaskAssignment.Reaction;
 import com.spring.dubbyserver.domain.task.dto.SavedTaskItem;
@@ -15,6 +16,11 @@ import com.spring.dubbyserver.global.common.CursorPageResponse;
 import com.spring.dubbyserver.global.config.DubbyProperties;
 import com.spring.dubbyserver.global.error.DubbyException;
 import com.spring.dubbyserver.global.error.ErrorCode;
+import com.spring.dubbyserver.infra.llm.LlmClient;
+import com.spring.dubbyserver.infra.llm.LlmPurpose;
+import com.spring.dubbyserver.infra.llm.LlmUsageLogService;
+import com.spring.dubbyserver.infra.llm.OutputValidator;
+import com.spring.dubbyserver.infra.llm.PromptFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +45,11 @@ public class TaskService {
     private final UserService userService;
     private final DubbyProperties properties;
     private final AppEventRecorder events;
+    private final BillingService billingService;
+    private final LlmClient llmClient;
+    private final PromptFactory promptFactory;
+    private final OutputValidator outputValidator;
+    private final LlmUsageLogService usageLog;
 
     /** 오늘 배정 조회 — 없으면 lazy 배정 (스펙 §9) */
     @Transactional
@@ -59,9 +70,9 @@ public class TaskService {
 
     private List<DailyTaskAssignment> assign(User user, LocalDate localDate) {
         int count = properties.task().dailyCount();
-        // TODO(P4): BillingService.resolveTier로 프리미엄 판정. P1은 무료만
+        boolean isPremium = billingService.isPremium(user.getId());
         List<TemplatePicker.Candidate> picked =
-                templatePicker.pickDailyTasks(user.getId(), localDate, false, user.getLocale(), count);
+                templatePicker.pickDailyTasks(user.getId(), localDate, isPremium, user.getLocale(), count);
 
         try {
             int slot = 1;
@@ -107,16 +118,44 @@ public class TaskService {
         return Map.of(
                 "assignmentId", assignment.getId(),
                 "reaction", reaction.name(),
-                "followUpMessage", followUpMessage(assignment.getTemplate(), reaction));
+                "followUpMessage", followUpMessage(userId, assignment.getTemplate(), reaction));
     }
 
-    /** 후속 문구: 템플릿 content.buttons[key].responses 랜덤 → 없으면 기본 풀 */
-    private String followUpMessage(Template template, Reaction reaction) {
+    /**
+     * 후속 문구: SALARY 등급은 LLM 개인화(TASK_FOLLOWUP, 실패 시 템플릿 강등 — 사용자는 실패를 모른다)
+     * → 템플릿 content.buttons[key].responses 랜덤 → 기본 풀
+     */
+    private String followUpMessage(UUID userId, Template template, Reaction reaction) {
+        if (billingService.isPremium(userId)) {
+            String personalized = premiumFollowUp(userId, template, reaction);
+            if (personalized != null) {
+                return personalized;
+            }
+        }
         List<String> responses = template.buttonResponses(reaction.name());
         if (responses != null && !responses.isEmpty()) {
             return responses.get(ThreadLocalRandom.current().nextInt(responses.size()));
         }
         return derbyDefaults.defaultResponse(reaction.name());
+    }
+
+    /** 프리미엄 LLM 후속반응 — 어떤 실패든 null 반환(템플릿 폴백) + fallback_used 로깅 */
+    private String premiumFollowUp(UUID userId, Template template, Reaction reaction) {
+        try {
+            String system = promptFactory.load("task_followup_system");
+            String userMessage = "업무 보고 원문: " + template.contentString("title")
+                    + "\n결론: " + template.contentString("conclusion")
+                    + "\n사용자 반응: " + derbyDefaults.label(reaction.name());
+            LlmClient.LlmResult result = llmClient.complete(LlmPurpose.TASK_FOLLOWUP,
+                    List.of(LlmClient.Message.system(system), LlmClient.Message.user(userMessage)), false);
+            var verdict = outputValidator.validate(result.content());
+            usageLog.log(new LlmUsageLogService.Entry(userId, LlmPurpose.TASK_FOLLOWUP, result.model(),
+                    promptFactory.promptVersion(), null, result.promptTokens(), result.completionTokens(),
+                    result.latencyMs(), result.finishReason(), null, !verdict.valid(), !verdict.valid()));
+            return verdict.valid() ? verdict.sanitizedReply() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Transactional

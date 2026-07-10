@@ -1,5 +1,6 @@
 package com.spring.dubbyserver.domain.chat;
 
+import com.spring.dubbyserver.domain.billing.BillingService;
 import com.spring.dubbyserver.domain.chat.dto.ChatMessageDto;
 import com.spring.dubbyserver.domain.chat.dto.ChatQuotaDto;
 import com.spring.dubbyserver.domain.chat.dto.ChatSendResponse;
@@ -43,6 +44,7 @@ public class ChatService {
 
     private final ChatMessageRepository messageRepository;
     private final ChatQuotaService quotaService;
+    private final BillingService billingService;
     private final DiaryService diaryService;
     private final UserService userService;
     private final SafetyFilter safetyFilter;
@@ -76,7 +78,7 @@ public class ChatService {
         User user = userService.getActiveUser(userId);
         ZoneId zone = ZoneId.of(user.getTimezone());
         LocalDate localDate = LocalDate.now(zone);
-        int limit = quotaService.limitFor("FREE"); // TODO(P4): BillingService.resolveTier
+        int limit = billingService.chatDailyLimit(billingService.resolveTier(userId));
 
         // 2. 멱등 재생
         var existing = messageRepository.findByUserIdAndClientMsgId(userId, clientMessageId);
@@ -353,9 +355,10 @@ public class ChatService {
         User user = userService.getActiveUser(userId);
         ZoneId zone = ZoneId.of(user.getTimezone());
         LocalDate localDate = LocalDate.now(zone);
-        int limit = quotaService.limitFor("FREE"); // TODO(P4)
+        BillingService.Tier tier = billingService.resolveTier(userId);
+        int limit = billingService.chatDailyLimit(tier);
         int used = quotaService.used(userId, localDate);
-        return new ChatQuotaDto("FREE", limit, used, Math.max(0, limit - used),
+        return new ChatQuotaDto(tier.name(), limit, used, Math.max(0, limit - used),
                 nextMidnight(zone), DerbyCopy.pick(ErrorCode.CHAT_LIMIT_EXCEEDED));
     }
 

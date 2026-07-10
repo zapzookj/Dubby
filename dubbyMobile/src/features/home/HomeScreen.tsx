@@ -74,8 +74,8 @@ export default function HomeScreen() {
             seed="menu-salary"
             emoji="💰"
             title="더비 월급"
-            subtitle="출근은 잘 합니다"
-            onPress={comingSoon}
+            subtitle={home.data.billing.tier === 'SALARY' ? '월급 지급자 💰' : '출근은 잘 합니다'}
+            onPress={() => router.push('/salary')}
           />
           <MenuTile
             seed="menu-settings"

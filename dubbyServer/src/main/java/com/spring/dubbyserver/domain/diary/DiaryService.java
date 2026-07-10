@@ -1,5 +1,6 @@
 package com.spring.dubbyserver.domain.diary;
 
+import com.spring.dubbyserver.domain.billing.BillingService;
 import com.spring.dubbyserver.domain.diary.dto.DiaryEntryDto;
 import com.spring.dubbyserver.domain.metrics.AppEventRecorder;
 import com.spring.dubbyserver.domain.template.DerbyDefaults;
@@ -7,11 +8,18 @@ import com.spring.dubbyserver.global.common.CursorPageResponse;
 import com.spring.dubbyserver.global.config.DubbyProperties;
 import com.spring.dubbyserver.global.error.DubbyException;
 import com.spring.dubbyserver.global.error.ErrorCode;
+import com.spring.dubbyserver.infra.llm.LlmClient;
+import com.spring.dubbyserver.infra.llm.LlmPurpose;
+import com.spring.dubbyserver.infra.llm.LlmUsageLogService;
+import com.spring.dubbyserver.infra.llm.PromptFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
@@ -28,6 +36,12 @@ public class DiaryService {
     private final DubbyProperties properties;
     private final AppEventRecorder events;
     private final DerbyDefaults derbyDefaults;
+    private final BillingService billingService;
+    private final LlmClient llmClient;
+    private final PromptFactory promptFactory;
+    private final LlmUsageLogService usageLog;
+    private final JdbcClient jdbc;
+    private final ObjectMapper objectMapper;
 
     // ── 후보 (ChatService에서 사용) ──
 
@@ -60,9 +74,9 @@ public class DiaryService {
         if (!candidate.isPendingAndAlive()) {
             throw new DubbyException(ErrorCode.DIARY_CANDIDATE_NOT_FOUND, "Candidate expired or handled");
         }
-        // 슬롯 검사 (P4 전까지 FREE 한도)
+        // 슬롯 검사 (등급별 한도)
         long count = entryRepository.countByUserId(userId);
-        if (count >= properties.diary().slotLimit().free()) {
+        if (count >= billingService.diarySlotLimit(billingService.resolveTier(userId))) {
             throw new DubbyException(ErrorCode.DIARY_SLOT_FULL);
         }
         candidate.approve();
@@ -121,11 +135,46 @@ public class DiaryService {
         return Map.of("shareText", shareText);
     }
 
-    /** 프리미엄 일기 재생성 — P4 전까지 FREE라 403. 게이트만 여기서, LLM 호출은 P4에서 연결 */
+    /** 프리미엄 일기 재생성 — SALARY 전용, 일일 rewrite-daily-limit 제한, DIARY purpose LLM 1회 */
     @Transactional
     public DiaryEntryDto rewrite(UUID userId, Long entryId) {
-        // TODO(P4): BillingService.resolveTier == SALARY 검사 후 DIARY purpose LLM 호출
-        throw new DubbyException(ErrorCode.DIARY_PREMIUM_ONLY);
+        if (!billingService.isPremium(userId)) {
+            throw new DubbyException(ErrorCode.DIARY_PREMIUM_ONLY);
+        }
+        long todayRewrites = jdbc.sql("""
+                SELECT COUNT(*) FROM llm_usage_log
+                WHERE user_id = :userId AND purpose = 'DIARY' AND created_at >= CURRENT_DATE
+                """)
+                .param("userId", userId).query(Long.class).single();
+        if (todayRewrites >= properties.diary().rewriteDailyLimit()) {
+            throw new DubbyException(ErrorCode.DIARY_REWRITE_LIMIT);
+        }
+
+        DiaryEntry entry = findOwned(userId, entryId);
+        LlmClient.LlmResult result = llmClient.complete(LlmPurpose.DIARY,
+                List.of(LlmClient.Message.system(promptFactory.load("diary_system")),
+                        LlmClient.Message.user("입력: " + entry.getFact())),
+                true);
+        usageLog.log(new LlmUsageLogService.Entry(userId, LlmPurpose.DIARY, result.model(),
+                promptFactory.promptVersion(), null, result.promptTokens(), result.completionTokens(),
+                result.latencyMs(), result.finishReason(), null, false, false));
+
+        try {
+            String raw = result.content().trim();
+            JsonNode root = objectMapper.readTree(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+            if (root.path("skip").asBoolean(false)) {
+                throw new DubbyException(ErrorCode.COMMON_INVALID_REQUEST, "민감 정보로 재생성 불가");
+            }
+            entry.rewrite(
+                    root.path("fact").asString(entry.getFact()),
+                    root.path("interpretation").asString(entry.getInterpretation()),
+                    root.path("conclusion").asString(entry.getConclusion()));
+        } catch (DubbyException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new DubbyException(ErrorCode.LLM_UPSTREAM_ERROR, "일기 재생성 파싱 실패");
+        }
+        return DiaryEntryDto.from(entry);
     }
 
     /** 홈/기타에서 쓰는 요약 — 최근 승인 일기 fact N개 (더비의 기억 블록) */

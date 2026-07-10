@@ -7,13 +7,11 @@ import { queryKeys } from '@/api/queryKeys';
 import { DerbyAvatar } from '@/components/DerbyAvatar';
 import { JankyButton } from '@/components/JankyButton';
 import { Screen } from '@/components/Screen';
-import { useUiStore } from '@/stores/uiStore';
 import { colors, spacing, typography } from '@/theme/tokens';
 
 /** 채팅 제한(과로) 화면 — 결제 압박 금지: 커피 버튼 1개, 감정 조작 없음 */
 export default function ExhaustedScreen() {
   const quota = useQuery({ queryKey: queryKeys.chatQuota, queryFn: getChatQuota, staleTime: 30_000 });
-  const showToast = useUiStore((s) => s.showToast);
 
   const resetsAtLabel = quota.data?.resetsAt
     ? new Date(quota.data.resetsAt).toLocaleTimeString('ko-KR', { hour: 'numeric' })
@@ -33,7 +31,7 @@ export default function ExhaustedScreen() {
         <JankyButton
           label="더비에게 커피 사주기"
           seed="coffee"
-          onPress={() => showToast('커피 결제는 준비 중입니다. 더비가 카드 단말기를 배우는 중입니다.')}
+          onPress={() => router.push('/salary?focus=coffee')}
         />
         <JankyButton
           label="내일 다시 괴롭히기"

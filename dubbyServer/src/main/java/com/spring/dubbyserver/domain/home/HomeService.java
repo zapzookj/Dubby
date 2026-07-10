@@ -1,5 +1,6 @@
 package com.spring.dubbyserver.domain.home;
 
+import com.spring.dubbyserver.domain.billing.BillingService;
 import com.spring.dubbyserver.domain.home.dto.HomeResponse;
 import com.spring.dubbyserver.domain.task.DailyTaskAssignmentRepository;
 import com.spring.dubbyserver.domain.template.Template;
@@ -27,6 +28,7 @@ public class HomeService {
     private final TemplateRepository templateRepository;
     private final DailyTaskAssignmentRepository assignmentRepository;
     private final DubbyProperties properties;
+    private final BillingService billingService;
     private final JdbcClient jdbc;
 
     private static final String[] DAY_MOODS = {"idle", "confident", "thinking", "happy"};
@@ -52,8 +54,9 @@ public class HomeService {
         // 정확도: 87~142% 시드 랜덤 (기획 — 개그 수치, 실제 성능 무관)
         String accuracy = (87 + Math.floorMod(seed >> 8, 56)) + "%";
 
-        // 채팅 쿼터 (P2 전까지 used=chat_daily_usage 직조회, tier=FREE)
-        int limit = properties.chat().dailyLimit().free();
+        // 채팅 쿼터 (등급별 한도)
+        BillingService.BillingStatus billing = billingService.status(userId);
+        int limit = billingService.chatDailyLimit(billing.tier());
         int used = jdbc.sql("""
                         SELECT COALESCE(used_count, 0) FROM chat_daily_usage
                         WHERE user_id = :userId AND usage_date = :date
@@ -79,9 +82,10 @@ public class HomeService {
         return new HomeResponse(
                 new HomeResponse.Derby(mood, statusLine, accuracy, currentWork),
                 new HomeResponse.TodayTasks(localDate.toString(), properties.task().dailyCount(), (int) reacted),
-                new HomeResponse.ChatQuota("FREE", limit, used, remaining),
+                new HomeResponse.ChatQuota(billing.tier().name(), limit, used, remaining),
                 new HomeResponse.Diary(totalEntries, pendingCandidates),
-                new HomeResponse.Billing("FREE", null)); // TODO(P4): BillingService.resolveTier
+                new HomeResponse.Billing(billing.tier().name(),
+                        billing.expiresAt() != null ? billing.expiresAt().toString() : null));
     }
 
     /** mood 우선순위: 과로(쿼터 소진) > 심야 취침 > 일자 시드 기본 무드 */

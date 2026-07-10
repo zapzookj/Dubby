@@ -42,11 +42,20 @@
 ### ⚠ SPIKE-B 미완 (오너 액션 필요)
 실기기 푸시 수신 검증 대기: ① EAS 프로젝트 생성(`eas init` → app.json에 projectId) ② 실기기(Android 우선) ③ 서버 `POST /api/v1/admin/push/test`로 즉시 발송 → 잠금화면 수신 → 탭 → 딥링크 진입 확인.
 
-### 다음 작업 (P4 — 수익화)
-- [ ] SPIKE-C: RevenueCat 샌드박스 (오너: Play Console 내부 트랙 + RC 프로젝트 + 상품 등록 `dubby_salary_monthly`/`dubby_coffee`, entitlement `salary`)
-- [ ] 백엔드: RevenueCat 웹훅(event_id 멱등+같은 트랜잭션, LWW 가드), BillingService.resolveTier(SALARY>SUPPORTER>FREE) → 채팅 한도/일기 슬롯/rewrite/TASK_FOLLOWUP LLM 연동(현재 TODO(P4) 주석 4곳: TaskService.assign, ChatService 2곳, DiaryService.rewrite, HomeService), GET /billing/me, POST /billing/sync
-- [ ] 모바일: react-native-purchases 설치(**이후 Expo Go 불가 — dev build 필요**), Paywall(/salary), 과로 화면 커피 연결
-- 이후 P5(출시: 배포/모니터링/스토어)
+### 완료 (P4 — 수익화, 코드 측)
+- [x] 백엔드: RC 웹훅(시크릿 검증, event_id 멱등+같은 트랜잭션 처리, **event_timestamp_ms LWW 가드** — 순서 역전 무해), 이벤트 타입 전체(INITIAL/RENEWAL/UNCANCEL/PRODUCT_CHANGE/CANCELLATION→will_renew만/EXPIRATION/BILLING_ISSUE/NON_RENEWING=커피 tx 멱등), BillingService(SALARY>SUPPORTER(커피24h)>FREE 단일 판정)
+- [x] 등급 연동 완료: 채팅 한도(전송+quota), 오늘의 업무 프리미엄 템플릿, 일기 슬롯, **SALARY 전용 LLM**: 업무 후속반응(TASK_FOLLOWUP, 실패 시 템플릿 강등) + 일기 재생성(DIARY, 일일 제한)
+- [x] GET /billing/me, POST /billing/sync(RC_API_KEY env 없으면 현재 상태 반환 — 웹훅 단독 경로)
+- [x] 모바일: react-native-purchases 설치 + purchases/revenuecat.ts(**Expo Go/키 미설정 시 우아한 비활성** — appOwnership 가드), Paywall(/salary 모달: 혜택 카피 + 가격은 RC 오퍼링에서만·정자세 가격영역·구매 복원·법적 고지), 과로 화면 커피→/salary?focus=coffee, 홈 월급 타일
+- [x] DoD: 웹훅 시뮬레이션 11개 시나리오 통과(멱등/LWW/커피 tx 멱등/등급 즉시 반영), tsc + expo-doctor 20/20
+
+### ⚠ SPIKE-C 미완 (오너 액션 필요)
+① Play Console 내부 트랙 + 구독 `dubby_salary_monthly` / 소모성 `dubby_coffee` 등록 ② RC 프로젝트: entitlement **`salary`**, 웹훅 URL 등록 + `REVENUECAT_WEBHOOK_SECRET` env ③ 클라: `EXPO_PUBLIC_RC_ANDROID_KEY`(public key) 주입 + dev build ④ 샌드박스 구매 → 웹훅 수신 → 한도 50회 확인. RC 대시보드의 app_user_id는 서버 UUID.
+
+### 다음 작업 (P5 — 출시 준비)
+- [ ] 운영 배포 구성(Dockerfile + compose prod or Fly.io), DB 백업, Sentry, EAS Build 프로필
+- [ ] 관리자 지표(GET /admin/metrics/daily), 개인정보처리방침, 스토어 등록물
+- [ ] 출시 전 체크리스트(roadmap §P5) — 스토어 계정 등 외부 트랙 완료 후
 
 ---
 
