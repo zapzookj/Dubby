@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/webhooks/revenuecat",
+                                "/api/v1/admin/metrics/**",   // 자체 X-Admin-Key 인증 (ADMIN_KEY env 미설정 시 전면 차단)
                                 "/api/v1/health",
                                 "/actuator/health").permitAll()
                         .anyRequest().authenticated())

@@ -5,9 +5,31 @@
 
 ---
 
-## 현재 상태 (2026-07-10)
+## 현재 상태 (2026-07-11)
 
-**페이즈: P0 완료 → P1 착수**
+**페이즈: P0~P4 완료 + P5 코드 측 완료 — 남은 것은 전부 오너 외부 트랙 의존**
+
+### 완료 (P5 — 코드 측)
+- [x] 운영 배포: dubbyServer/Dockerfile(멀티스테이지 JDK21), docker-compose.prod.yml(app+postgres+caddy TLS+일일 백업 컨테이너), Caddyfile, .env.example
+- [x] GET /admin/metrics/daily (X-Admin-Key 헤더 인증, ADMIN_KEY env 미설정 시 전면 차단) — DAU/신규/채팅/토큰/푸시/구독 요약
+- [x] V2__create_stats_views.sql (v_task_template_stats keep_rate, v_push_template_stats open_rate)
+- [x] eas.json (development/preview/production 프로필 — API URL은 CHANGE-ME)
+- [x] docs/privacy_policy_draft.md (개인정보처리방침 초안 — 오너 검수·호스팅 필요)
+- [x] 백엔드 full build 통과, 전 페이즈 DoD 실검증 완료
+
+### 🔑 오너 액션 대기 목록 (전체 — 이것만 끝나면 출시 크리티컬 패스 완료)
+1. **OPENROUTER_API_KEY** → SPIKE-A 실행(`node tools/persona/run_regression.mjs`) → 모델 확정 → yml 반영. 서버 실모델 전환: `LLM_MOCK=false`
+2. **EAS 프로젝트** (`eas init`) → app.json에 projectId → SPIKE-B 실기기 푸시 수신 검증
+3. **Google Play Console / App Store** 계정 + 상품 등록(`dubby_salary_monthly`, `dubby_coffee`)
+4. **RevenueCat**: 프로젝트 + entitlement `salary` + 웹훅 URL/시크릿 + public SDK key(`EXPO_PUBLIC_RC_ANDROID_KEY`) → SPIKE-C 샌드박스 결제
+5. **더비 표정 PNG 8종** (현재 이모지 폴백 — DerbyAvatar.tsx 한 파일 교체)
+6. **운영 서버**(VPS/Fly.io) + 도메인 → docker-compose.prod.yml 배포, 개인정보처리방침 호스팅
+7. **에뮬레이터 환경 복구**(머신 재부팅 or AVD 재생성) — 시각적 검증용. 코드 검증은 API 레벨로 완료됨
+8. 앱 아이콘/스플래시 교체 (현재 Expo 기본), Sentry 계정(선택)
+
+---
+
+## 이전 기록 (P0 시점)
 
 ### 완료 (P0)
 - [x] 설계/스펙 확정 및 문서화 (docs/ 4종 — 오너 승인 완료). 원격: https://github.com/zapzookj/Dubby.git

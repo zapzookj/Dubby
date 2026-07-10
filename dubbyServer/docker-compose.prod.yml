@@ -1,0 +1,65 @@
+# 운영 배포 (단일 VPS): app + postgres + caddy(TLS 자동)
+# 사용법: .env 채우고 `docker compose -f docker-compose.prod.yml up -d --build`
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env          # JWT_SECRET, OPENROUTER_API_KEY, REVENUECAT_WEBHOOK_SECRET,
+                            # DB_URL, DB_USERNAME, DB_PASSWORD, ADMIN_KEY, (RC_API_KEY)
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dubby
+      POSTGRES_USER: ${DB_USERNAME:-dubby}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set in .env}
+    volumes:
+      - dubby-pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-dubby} -d dubby"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - app
+
+  # 일일 DB 백업 (새벽 4시 KST = 19시 UTC) — 오브젝트 스토리지 업로드는 오너 환경에서 cron 추가
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:?set in .env}
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      sh -c 'while true; do
+        sleep $$(( ( $$(date -d "19:00" +%s 2>/dev/null || echo 0) - $$(date +%s) + 86400 ) % 86400 ));
+        pg_dump -h postgres -U ${DB_USERNAME:-dubby} dubby | gzip > /backups/dubby_$$(date +%Y%m%d).sql.gz;
+        find /backups -name "*.sql.gz" -mtime +14 -delete;
+      done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  dubby-pgdata:
+  caddy-data:
