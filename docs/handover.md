@@ -34,13 +34,19 @@
 `OPENROUTER_API_KEY=sk-... node tools/persona/run_regression.mjs` → 결과 파일(tools/persona/results/) 오너 검수(기준: 오해+OOC없음 24/30, json 30/30) → 채택 모델을 application.yml `dubby.llm.routing`에 반영 → 서버는 `LLM_MOCK=false` + 키로 실모델 전환.
 **P4(수익화) 전까지만 완료되면 출시 크리티컬 패스에 영향 없음.**
 
-### 다음 작업 (P3 — 푸시)
-- [ ] POST /push/tokens(멱등 upsert)/tokens/delete, GET·PUT /push/settings
-- [ ] PushDispatchScheduler(10분 폴링, PENDING 선삽입 ON CONFLICT, 지터, quiet 가드) + ExpoPushClient(100건 청크, 티켓 DeviceNotRegistered 즉시 무효화) + PushReceiptScheduler
-- [ ] POST /push/logs/{id}/open, POST /admin/push/test(local 전용)
-- [ ] 모바일: expo-notifications 권한 흐름(온보딩 프리 프롬프트 연결), 토큰 등록, 딥링크 라우팅(콜드스타트 pendingDeepLink), 설정 알림 토글 연결
-- [ ] SPIKE-B: 실기기 푸시 수신 (오너 실기기 필요)
-- 이후 P4(수익화 — 스토어/RC 계정 필요), P5(출시)
+### 완료 (P3 — 푸시)
+- [x] 백엔드: POST /push/tokens(멱등 upsert)+tokens/delete, GET·PUT /push/settings(OFF는 발송 완전 제외), PushDispatchScheduler(10분 폴링: 슬롯/quiet 22-08 하드가드/지터 → 템플릿 선정(30일 쿨다운·계열 하루 1개·{nickname} 치환) → **PENDING 선삽입 ON CONFLICT** → Expo 발송 → 티켓 반영), ExpoPushClient(100/1000건 청크, 티켓·영수증 양단 DeviceNotRegistered 즉시 무효화), PushReceiptScheduler(15분, 48h 마감), POST /push/logs/{id}/open, POST /admin/push/test(local 전용)
+- [x] 모바일: notifications/setup(프리 프롬프트→OS 권한→토큰 등록, 앱 시작 시 silent 재등록, **EAS projectId 없으면 우아하게 스킵**), 딥링크 라우팅(실행 중 리스너+콜드스타트 pendingDeepLink→(main) 가드 후 소비), 온보딩 마지막 스텝 프리 프롬프트, 설정 알림 토글(분리불안 다이얼로그 1회 후 확실 반영)+횟수 1~3 선택
+- [x] DoD: 엔드포인트 10개 시나리오 통과(멱등 등록/범위 가드/OFF/오픈 추적), Expo API 실호출 확인(가짜 토큰 → DeviceNotRegistered 티켓 수신), 스케줄러 기동 무에러, tsc 통과
+
+### ⚠ SPIKE-B 미완 (오너 액션 필요)
+실기기 푸시 수신 검증 대기: ① EAS 프로젝트 생성(`eas init` → app.json에 projectId) ② 실기기(Android 우선) ③ 서버 `POST /api/v1/admin/push/test`로 즉시 발송 → 잠금화면 수신 → 탭 → 딥링크 진입 확인.
+
+### 다음 작업 (P4 — 수익화)
+- [ ] SPIKE-C: RevenueCat 샌드박스 (오너: Play Console 내부 트랙 + RC 프로젝트 + 상품 등록 `dubby_salary_monthly`/`dubby_coffee`, entitlement `salary`)
+- [ ] 백엔드: RevenueCat 웹훅(event_id 멱등+같은 트랜잭션, LWW 가드), BillingService.resolveTier(SALARY>SUPPORTER>FREE) → 채팅 한도/일기 슬롯/rewrite/TASK_FOLLOWUP LLM 연동(현재 TODO(P4) 주석 4곳: TaskService.assign, ChatService 2곳, DiaryService.rewrite, HomeService), GET /billing/me, POST /billing/sync
+- [ ] 모바일: react-native-purchases 설치(**이후 Expo Go 불가 — dev build 필요**), Paywall(/salary), 과로 화면 커피 연결
+- 이후 P5(출시: 배포/모니터링/스토어)
 
 ---
 

@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
 import { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { DerbyApiError } from '@/api/client';
+import { getPushSettings, putPushSettings } from '@/api/endpoints/push';
 import { deleteAccount, getSettings, patchSettings } from '@/api/endpoints/settings';
 import { queryKeys } from '@/api/queryKeys';
 import { DerbyErrorView } from '@/components/DerbyErrorView';
@@ -63,13 +64,7 @@ export default function SettingsScreen() {
             if (!v) showToast('더비가 근거 있는 말만 하려고 시도합니다. 실패할 수 있습니다.');
           }}
         />
-        <SettingRow
-          label="알림 받기"
-          sub="더비가 가끔 사용자님을 찾습니다. (푸시 준비 중)"
-          value={false}
-          disabled
-          onChange={() => showToast('알림 기능은 더비가 아직 배우는 중입니다.')}
-        />
+        <PushSettingsRows />
         <FakeSettingRow label="더비의 분리 불안 관리" status="점검 중" />
       </Section>
 
@@ -152,6 +147,81 @@ function RunawaySettingRow(props: { label: string; sub?: string; value: boolean;
         />
       </Animated.View>
     </View>
+  );
+}
+
+/** 알림 설정 — OFF는 이스터에그 다이얼로그 1회 후 확실히 반영 (서버 발송 중단) */
+function PushSettingsRows() {
+  const queryClient = useQueryClient();
+  const showToast = useUiStore((s) => s.showToast);
+  const pushSettings = useQuery({
+    queryKey: ['push', 'settings'],
+    queryFn: getPushSettings,
+    staleTime: 5 * 60_000,
+  });
+
+  const update = useMutation({
+    mutationFn: putPushSettings,
+    onSuccess: (data) => queryClient.setQueryData(['push', 'settings'], data),
+    onError: (e) => e instanceof DerbyApiError && showToast(e.derbyMessage),
+  });
+
+  if (!pushSettings.data) {
+    return (
+      <View style={styles.row}>
+        <View style={styles.rowText}>
+          <Text style={styles.rowLabel}>알림 받기</Text>
+          <Text style={styles.rowSub}>더비가 알림 설정을 찾는 중입니다...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const { enabled, maxDailyCount } = pushSettings.data;
+
+  const handleToggle = (value: boolean) => {
+    if (!value) {
+      // 분리 불안 이스터에그 — 1회 다이얼로그 후 선택은 확실히 존중
+      Alert.alert('알림을 끄시겠습니까?', '더비의 분리 불안이 심해질 수 있습니다.', [
+        { text: '더비를 안심시키고 유지', style: 'cancel' },
+        {
+          text: '그래도 끄기',
+          style: 'destructive',
+          onPress: () => update.mutate({ enabled: false, maxDailyCount }),
+        },
+      ]);
+      return;
+    }
+    update.mutate({ enabled: true, maxDailyCount });
+  };
+
+  return (
+    <>
+      <SettingRow
+        label="알림 받기"
+        sub="더비가 가끔 사용자님을 찾습니다. 이유는 그때그때 지어냅니다."
+        value={enabled}
+        onChange={handleToggle}
+      />
+      {enabled && (
+        <View style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={styles.rowLabel}>더비를 견디는 횟수</Text>
+            <Text style={styles.rowSub}>하루 최대 알림 수</Text>
+          </View>
+          <View style={styles.countRow}>
+            {[1, 2, 3].map((n) => (
+              <Pressable
+                key={n}
+                onPress={() => update.mutate({ enabled: true, maxDailyCount: n })}
+                style={[styles.countChip, maxDailyCount === n && styles.countChipActive]}>
+                <Text style={[styles.countChipText, maxDailyCount === n && { color: '#FFF' }]}>{n}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+    </>
   );
 }
 
@@ -254,6 +324,19 @@ const styles = StyleSheet.create({
   rowSub: { ...typography.caption, color: colors.inkSub },
   fakeStatus: { ...typography.caption, color: colors.inkSub, fontStyle: 'italic' },
   plainSub: { ...typography.body, color: colors.inkSub },
+  countRow: { flexDirection: 'row', gap: spacing(2) },
+  countChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countChipActive: { backgroundColor: colors.derbyBlue },
+  countChipText: { ...typography.body, fontWeight: '700', color: colors.ink },
   nicknameInput: {
     ...typography.body,
     color: colors.ink,

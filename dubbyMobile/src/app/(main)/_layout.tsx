@@ -1,10 +1,24 @@
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, router } from 'expo-router';
+import { useEffect } from 'react';
 
 import { useAppStateStore } from '@/stores/appStateStore';
+import { useUiStore } from '@/stores/uiStore';
 import { colors } from '@/theme/tokens';
 
 export default function MainLayout() {
   const onboardingCompleted = useAppStateStore((s) => s.onboardingCompleted);
+  const pendingDeepLink = useUiStore((s) => s.pendingDeepLink);
+  const setPendingDeepLink = useUiStore((s) => s.setPendingDeepLink);
+
+  // 콜드 스타트 푸시 딥링크 소비 (가드 통과 후)
+  useEffect(() => {
+    if (onboardingCompleted && pendingDeepLink && pendingDeepLink !== '/') {
+      const path = pendingDeepLink;
+      setPendingDeepLink(null);
+      // 스택 마운트 직후 push — 다음 틱으로 미룸
+      setTimeout(() => router.push(path as never), 0);
+    }
+  }, [onboardingCompleted, pendingDeepLink, setPendingDeepLink]);
 
   if (!onboardingCompleted) {
     return <Redirect href="/onboarding" />;

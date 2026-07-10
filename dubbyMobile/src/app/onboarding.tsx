@@ -1,18 +1,20 @@
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DerbyAvatar } from '@/components/DerbyAvatar';
 import { JankyButton } from '@/components/JankyButton';
 import { Screen } from '@/components/Screen';
+import { requestAndRegisterPush } from '@/notifications/setup';
 import { useAppStateStore } from '@/stores/appStateStore';
 import { onboardingDoneLabel, onboardingSteps } from '@/theme/copy';
 import { colors, spacing, typography } from '@/theme/tokens';
 
-/** 온보딩 — 타이핑 연출 4스텝, 탭하면 즉시 완성. 기획안 §12 */
+/** 온보딩 — 타이핑 연출 4스텝 + 푸시 프리 프롬프트. 기획안 §12 */
 export default function OnboardingScreen() {
   const completed = useAppStateStore((s) => s.onboardingCompleted);
   const completeOnboarding = useAppStateStore((s) => s.completeOnboarding);
+  const recordPushPrompt = useAppStateStore((s) => s.recordPushPrompt);
   const [step, setStep] = useState(0);
 
   if (completed) {
@@ -20,6 +22,33 @@ export default function OnboardingScreen() {
   }
 
   const isLast = step === onboardingSteps.length - 1;
+
+  // 프리 프롬프트(더비 톤) → 수락 시에만 OS 권한 요청. 거절해도 진행 (기획 §5.2)
+  const finish = () => {
+    recordPushPrompt();
+    Alert.alert(
+      '더비의 부탁',
+      '더비가 가끔 사용자님을 찾아도 될까요?\n(하루 1번, 대체로 쓸데없는 보고입니다)',
+      [
+        {
+          text: '나중에',
+          style: 'cancel',
+          onPress: () => {
+            completeOnboarding();
+            router.replace('/');
+          },
+        },
+        {
+          text: '허락하기',
+          onPress: async () => {
+            await requestAndRegisterPush().catch(() => {});
+            completeOnboarding();
+            router.replace('/');
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <Screen>
@@ -34,14 +63,7 @@ export default function OnboardingScreen() {
       </View>
       <View style={styles.footer}>
         {isLast ? (
-          <JankyButton
-            label={onboardingDoneLabel}
-            seed="onboarding-done"
-            onPress={() => {
-              completeOnboarding();
-              router.replace('/');
-            }}
-          />
+          <JankyButton label={onboardingDoneLabel} seed="onboarding-done" onPress={finish} />
         ) : (
           <JankyButton label="다음" variant="secondary" seed={`next-${step}`} onPress={() => setStep(step + 1)} />
         )}
