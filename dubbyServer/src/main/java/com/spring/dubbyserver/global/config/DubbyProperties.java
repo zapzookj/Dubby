@@ -20,9 +20,12 @@ public record DubbyProperties(
         Diary diary,
         Push push,
         Billing billing,
+        Retention retention,
         Llm llm,
         Revenuecat revenuecat
 ) {
+    public record Retention(Duration chatMessages) {}
+
     public record Auth(String jwtSecret, Duration accessTokenTtl) {}
 
     public record User(int nicknameMaxLength, Duration timezoneChangeMinInterval) {}
@@ -48,7 +51,7 @@ public record DubbyProperties(
 
     public record Billing(String entitlementId, Map<String, String> products, Duration coffeeEffectDuration) {}
 
-    public record Llm(String promptVersion, OpenRouter openrouter, Map<String, Route> routing,
+    public record Llm(boolean mock, String promptVersion, OpenRouter openrouter, Map<String, Route> routing,
                       Map<String, Integer> misreadLevelWeights, int inputTokenHardCap, Budget budget) {
         public record OpenRouter(String baseUrl, String apiKey, Duration connectTimeout, Duration readTimeout) {}
         public record Route(String primary, List<String> fallbacks, double temperature, int maxTokens) {}

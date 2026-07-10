@@ -64,7 +64,10 @@ dubby:
       salary: dubby_salary_monthly
       coffee: dubby_coffee
     coffee-effect-duration: 24h
+  retention:
+    chat-messages: 90d              # is_saved=true 제외 하드 삭제
   llm:
+    mock: false                     # true면 OpenRouter 대신 모의 LLM (로컬 개발용 — 페르소나 검증 불가)
     prompt-version: v1
     openrouter:
       base-url: https://openrouter.ai/api/v1

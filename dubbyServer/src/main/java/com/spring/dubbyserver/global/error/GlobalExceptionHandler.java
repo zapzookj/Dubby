@@ -13,6 +13,19 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(com.spring.dubbyserver.domain.chat.ChatLimitExceededException.class)
+    public ResponseEntity<java.util.Map<String, Object>> handleChatLimit(
+            com.spring.dubbyserver.domain.chat.ChatLimitExceededException e) {
+        ErrorResponse base = ErrorResponse.of(e.getErrorCode());
+        java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("code", base.code());
+        body.put("message", base.message());
+        body.put("derbyMessage", base.derbyMessage());
+        body.put("resetsAt", e.getResetsAt());
+        body.put("paywallHint", e.getPaywallHint());
+        return ResponseEntity.status(e.getErrorCode().getStatus()).body(body);
+    }
+
     @ExceptionHandler(DubbyException.class)
     public ResponseEntity<ErrorResponse> handleDubby(DubbyException e) {
         ErrorCode code = e.getErrorCode();
