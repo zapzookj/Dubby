@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:55432/dubby
+    username: dubby
+    password: ${DB_PASSWORD:dubby-local}
+
+dubby:
+  auth:
+    # 로컬 개발 전용 기본값 (운영에서는 반드시 env 주입 — application-prod.yml에는 기본값 없음)
+    jwt-secret: ${JWT_SECRET:dubby-local-dev-secret-key-please-do-not-use-in-prod-0123456789}
+
+logging:
+  level:
+    com.spring.dubbyserver: DEBUG

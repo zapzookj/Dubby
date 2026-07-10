@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dubby-postgres
+    environment:
+      POSTGRES_DB: dubby
+      POSTGRES_USER: dubby
+      POSTGRES_PASSWORD: dubby-local
+    ports:
+      # 개발 머신에 네이티브 PostgreSQL 17이 5432를 점유 중이라 55432 사용
+      - "55432:5432"
+    volumes:
+      - dubby-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dubby -d dubby"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dubby-pgdata:

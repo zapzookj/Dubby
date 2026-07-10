@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: dubbyServer
+  jpa:
+    hibernate:
+      ddl-auto: validate          # 스키마 변경은 오직 Flyway
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  shutdown: graceful
+
+# ──────────────────────────────────────────────────────────────
+# 튜닝 대상 상수 총람 — 코드 하드코딩 금지, DubbyProperties로만 접근
+# 본 파일의 수치는 전부 "초기값"이며 운영 튜닝 대상이다.
+# ──────────────────────────────────────────────────────────────
+dubby:
+  auth:
+    jwt-secret: ${JWT_SECRET}
+    access-token-ttl: 30d
+  user:
+    nickname-max-length: 12
+    timezone-change-min-interval: 24h
+  task:
+    daily-count: 3
+    retry-max: 2
+    default-cooldown-days: 60
+  chat:
+    daily-limit:
+      free: 3
+      supporter: 20
+      salary: 50
+    max-content-length: 500
+    history-max-messages: 10
+    per-user-concurrency: 1
+  diary:
+    slot-limit:
+      free: 30
+      salary: 200
+    candidate-ttl: 72h
+    daily-candidate-max: 5
+    candidate-min-gap-messages: 2
+    rewrite-daily-limit: 3
+  push:
+    default-daily-count: 1
+    max-daily-count: 3
+    default-cooldown-days: 30
+    dispatch-interval: 10m
+    receipt-interval: 15m
+    windows:
+      morning: { start: "08:00", end: "10:00" }
+      lunch:   { start: "12:00", end: "13:30" }
+      evening: { start: "19:00", end: "21:30" }
+    default-slots-by-count:
+      1: [EVENING]
+      2: [MORNING, EVENING]
+      3: [MORNING, LUNCH, EVENING]
+    quiet: { start: "22:00", end: "08:00" }
+  billing:
+    entitlement-id: salary
+    products:
+      salary: dubby_salary_monthly
+      coffee: dubby_coffee
+    coffee-effect-duration: 24h
+  llm:
+    prompt-version: v1
+    openrouter:
+      base-url: https://openrouter.ai/api/v1
+      api-key: ${OPENROUTER_API_KEY:}
+      connect-timeout: 2s
+      read-timeout: 25s
+    routing:
+      chat:          { primary: "openai/gpt-4o-mini", fallbacks: ["google/gemini-2.5-flash-lite"], temperature: 0.9, max-tokens: 600 }
+      chat-precise:  { primary: "openai/gpt-4o-mini", fallbacks: ["google/gemini-2.5-flash-lite"], temperature: 0.5, max-tokens: 600 }
+      diary:         { primary: "google/gemini-2.5-flash-lite", fallbacks: ["openai/gpt-4.1-nano"], temperature: 0.9, max-tokens: 500 }
+      task-followup: { primary: "google/gemini-2.5-flash-lite", fallbacks: ["openai/gpt-4.1-nano"], temperature: 1.0, max-tokens: 240 }
+    misread-level-weights: { lv1: 60, lv2: 40 }
+    input-token-hard-cap: 4000
+    budget:
+      global-daily-token-limit: 10000000
+  revenuecat:
+    webhook-secret: ${REVENUECAT_WEBHOOK_SECRET:}
