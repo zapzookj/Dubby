@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import * as ExpoCrypto from 'expo-crypto';
 import * as Localization from 'expo-localization';
 import * as Application from 'expo-application';
 import { Platform } from 'react-native';
@@ -45,13 +46,9 @@ async function getOrCreateDeviceId(): Promise<string> {
 }
 
 export function generateUuid(): string {
-  // RFC4122 v4 (crypto.getRandomValues는 RN/Expo 런타임 제공)
-  const bytes = new Uint8Array(16);
-  globalThis.crypto.getRandomValues(bytes);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  // ⚠ RN(Hermes)에는 웹 표준 crypto.getRandomValues가 없다 — expo-crypto의 CSPRNG 사용
+  // (deviceId는 사실상 계정 자격증명이므로 Math.random 폴백 금지)
+  return ExpoCrypto.randomUUID();
 }
 
 // ── 게스트 인증 (401 시 동일 deviceId 재호출 — refresh 토큰 없음) ──
