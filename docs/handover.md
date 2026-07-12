@@ -19,7 +19,7 @@
 
 ### 🔑 오너 액션 대기 목록 (전체 — 이것만 끝나면 출시 크리티컬 패스 완료)
 1. **OPENROUTER_API_KEY** → SPIKE-A 실행(`node tools/persona/run_regression.mjs`) → 모델 확정 → yml 반영. 서버 실모델 전환: `LLM_MOCK=false`
-2. **EAS 프로젝트** (`eas init`) → app.json에 projectId → SPIKE-B 실기기 푸시 수신 검증
+2. **Apple Developer Program($99/년) + EAS 프로젝트** (`eas init`) — **우선순위 상향: 아이폰 UX 테스트 자체가 이것에 의존**. App Store의 Expo Go가 SDK 54에 계류 중이라(우리는 SDK 57) 실기기 테스트는 `eas go`(TestFlight 경유 커스텀 Expo Go)가 유일 경로. 상세: docs/ux_test_guide.md §0-A. projectId 확보 시 SPIKE-B(푸시)도 함께 해제됨
 3. **Google Play Console / App Store** 계정 + 상품 등록(`dubby_salary_monthly`, `dubby_coffee`)
 4. **RevenueCat**: 프로젝트 + entitlement `salary` + 웹훅 URL/시크릿 + public SDK key(`EXPO_PUBLIC_RC_ANDROID_KEY`) → SPIKE-C 샌드박스 결제
 5. **더비 표정 PNG 8종** (현재 이모지 폴백 — DerbyAvatar.tsx 한 파일 교체)

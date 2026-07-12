@@ -1,5 +1,35 @@
 # 아이폰 UX 테스트 가이드 (Windows PC + iPhone, Expo Go)
 
+> **⚠ 2026-07 현황 (중요):** App Store의 Expo Go는 **SDK 54에 묶여 있다** (SDK 55 빌드가
+> 애플 심사에 수개월째 계류 — [Expo 공지](https://expo.dev/changelog/expo-go-and-app-store-may-2026)).
+> 이 프로젝트는 **SDK 57**이라 앱스토어판 Expo Go로는 "requires a newer version of Expo Go"
+> 에러가 뜬다 — 최신을 설치해도 동일하며 정상적인 현상.
+>
+> **아이폰 실기기 테스트의 유일한 경로: `eas go`** — Apple Developer Program($99/년, 어차피
+> iOS 출시에 필수) 가입 후, EAS가 내 계정의 TestFlight로 SDK 57용 Expo Go를 만들어 배포해준다.
+> 절차는 아래 §0-A. Apple 계정 없이 당장 테스트하려면 Android 에뮬레이터/기기 경로(§0-B)뿐이다.
+
+## 0-A. 아이폰 경로: Apple Developer + `eas go` (최초 1회, 승인 대기 포함 1~2일)
+
+1. **Apple Developer Program 가입**: developer.apple.com → 본인 Apple ID로 등록(개인, $99/년).
+   승인까지 몇 시간~2일. *(iOS 스토어 출시에 어차피 필수 — 선투자)*
+2. **Expo 계정 생성**(무료): expo.dev
+3. **PC에서** (dubbyMobile 폴더):
+   ```powershell
+   npx eas-cli login          # Expo 계정 로그인
+   npx eas-cli init           # EAS 프로젝트 생성 → app.json에 projectId 기록됨 (푸시 SPIKE-B에도 필요)
+   npx eas-cli go             # 안내를 따라 Apple 계정 로그인 → 내 TestFlight로 Expo Go 빌드/배포
+   ```
+4. **아이폰**: App Store에서 **TestFlight**(Apple 공식) 설치 → 이메일 초대 수락 → 커스텀 Expo Go 설치
+5. 이후는 아래 §1~3 그대로 진행 (QR 스캔 대상 앱이 TestFlight로 받은 Expo Go일 뿐)
+
+## 0-B. 대안: Android로 즉시 테스트 (계정 불필요)
+
+- Android 실기기가 있다면: Expo Go를 Play 스토어가 아닌 **expo.dev/go**에서 SDK 57 버전 APK로
+  직접 설치 가능 → 아래 §1~3 동일.
+- PC 에뮬레이터: 현재 이 머신의 AVD가 고장 상태(handover §미해결 1번) — 머신 재부팅 후
+  `npx expo start` 창에서 `a` 키로 시도.
+
 > 대상: 모바일 개발 경험이 없는 오너. PC는 이 레포가 있는 Windows 머신 기준.
 > 원리: 아이폰에 **Expo Go**(공식 테스트 러너 앱)를 설치하면, 같은 Wi-Fi에 있는 PC가
 > 앱 코드(Metro, 8081 포트)와 백엔드 API(8080 포트)를 아이폰에 실시간으로 서빙한다.
