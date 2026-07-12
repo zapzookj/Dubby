@@ -34,7 +34,7 @@ public class AuthService {
                     try {
                         return userRepository.saveAndFlush(User.builder()
                                 .deviceId(request.deviceId())
-                                .locale(request.locale())
+                                .locale(normalizeLocale(request.locale()))
                                 .timezone(request.timezone())
                                 .platform(request.platform())
                                 .appVersion(request.appVersion())
@@ -50,6 +50,16 @@ public class AuthService {
 
         String token = jwtProvider.issue(user.getId(), user.getDeviceId());
         return new DeviceAuthResponse(user.getId(), created[0], token, jwtProvider.ttlSeconds());
+    }
+
+    /**
+     * BCP-47 태그('ko-KR', 'en_US')를 언어 코드('ko')로 정규화.
+     * 템플릿 locale('ko')과의 매칭 기준 — 미정규화 시 템플릿 조회가 전부 빈 결과가 된다.
+     */
+    static String normalizeLocale(String raw) {
+        if (raw == null || raw.isBlank()) return "ko";
+        String language = raw.split("[-_]")[0].toLowerCase();
+        return language.isBlank() ? "ko" : language;
     }
 
     private void validateDeviceId(String deviceId) {

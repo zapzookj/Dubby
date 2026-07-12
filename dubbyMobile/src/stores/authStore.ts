@@ -7,6 +7,8 @@ type AuthStatus = 'loading' | 'guest' | 'error';
 interface AuthState {
   status: AuthStatus;
   userId: string | null;
+  /** bootstrap 실패 원인 — Gate의 DerbyErrorView가 실제 에러(네트워크 등)를 표시하는 데 사용 */
+  error: unknown;
   bootstrap: () => Promise<void>;
 }
 
@@ -14,13 +16,14 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   status: 'loading',
   userId: null,
+  error: null,
   bootstrap: async () => {
-    set({ status: 'loading' });
+    set({ status: 'loading', error: null });
     try {
       const auth = await authenticateDevice();
       set({ status: 'guest', userId: auth.userId });
-    } catch {
-      set({ status: 'error', userId: null });
+    } catch (e) {
+      set({ status: 'error', userId: null, error: e });
     }
   },
 }));

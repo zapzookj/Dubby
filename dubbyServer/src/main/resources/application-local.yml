@@ -6,12 +6,13 @@ spring:
 
 dubby:
   llm:
-    mock: ${LLM_MOCK:true}   # 로컬 기본 모의 LLM. 실모델 테스트: LLM_MOCK=false + OPENROUTER_API_KEY
+    mock: false   # 로컬 기본 모의 LLM. 실모델 테스트: LLM_MOCK=false + OPENROUTER_API_KEY
   revenuecat:
     webhook-secret: ${REVENUECAT_WEBHOOK_SECRET:local-webhook-secret}   # 로컬 웹훅 시뮬레이션용
   auth:
-    # 로컬 개발 전용 기본값 (운영에서는 반드시 env 주입 — application-prod.yml에는 기본값 없음)
-    jwt-secret: ${JWT_SECRET:dubby-local-dev-secret-key-please-do-not-use-in-prod-0123456789}
+    jwt-secret: VxL8T7V8N3u5QJkZfQe5g0kYy9KjK9m0zXwVZp5F7zA=
+  # 로컬 개발 전용 기본값 (운영에서는 반드시 env 주입 — application-prod.yml에는 기본값 없음)
+#    jwt-secret: YwhDwL2Q6p5k+yscOZUPErJBxnkFyIeaM8qGIOrypYs=
 
 logging:
   level:

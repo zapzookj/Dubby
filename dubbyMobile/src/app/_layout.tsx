@@ -65,11 +65,12 @@ function Gate({
   hydrated: boolean;
   onRetry: () => void;
 }) {
+  const authError = useAuthStore((s) => s.error);
   if (authStatus === 'loading' || !hydrated) {
     return <DerbyLoading />;
   }
   if (authStatus === 'error') {
-    return <DerbyErrorView error={null} onRetry={onRetry} />;
+    return <DerbyErrorView error={authError} onRetry={onRetry} />;
   }
   return (
     <Stack screenOptions={{ headerShown: false }}>

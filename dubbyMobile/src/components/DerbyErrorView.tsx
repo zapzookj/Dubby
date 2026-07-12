@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { DerbyApiError } from '@/api/client';
 import { isSeriousZone } from '@/api/errorCodes';
+import { API_BASE_URL } from '@/constants/config';
 import { DerbyAvatar } from '@/components/DerbyAvatar';
 import { JankyButton } from '@/components/JankyButton';
 import { useUiStore } from '@/stores/uiStore';
@@ -26,8 +27,12 @@ export function DerbyErrorView({ error, onRetry }: DerbyErrorViewProps) {
   const showToast = useUiStore((s) => s.showToast);
 
   let message = genericErrorCopy;
+  let debugInfo = `대상 서버: ${API_BASE_URL}`;
   if (error instanceof DerbyApiError) {
     message = isSeriousZone(error.code) ? error.message : error.derbyMessage;
+    debugInfo = `${error.code} (HTTP ${error.status || '-'}) · ${API_BASE_URL}`;
+  } else if (error instanceof Error) {
+    debugInfo = `${error.message} · ${API_BASE_URL}`;
   }
 
   return (
@@ -43,6 +48,8 @@ export function DerbyErrorView({ error, onRetry }: DerbyErrorViewProps) {
           showToast(consoleDerbyReactions[Math.floor(Math.random() * consoleDerbyReactions.length)])
         }
       />
+      {/* 개발 중에만: 실제 원인/대상 서버 표기 — "예상한 척" 문구만으로 오진하는 것 방지 */}
+      {__DEV__ && <Text style={styles.debug}>{debugInfo}</Text>}
     </View>
   );
 }
@@ -60,5 +67,11 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.ink,
     textAlign: 'center',
+  },
+  debug: {
+    ...typography.caption,
+    color: colors.inkSub,
+    textAlign: 'center',
+    marginTop: spacing(2),
   },
 });
