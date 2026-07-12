@@ -1,5 +1,4 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import * as Notifications from 'expo-notifications';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -10,8 +9,7 @@ import { queryClient, wireAppStateFocus } from '@/api/queryClient';
 import { DerbyErrorView } from '@/components/DerbyErrorView';
 import { DerbyLoading } from '@/components/DerbyLoading';
 import { DerbyToastHost } from '@/components/DerbyToast';
-import { handleNotificationResponse } from '@/notifications/router';
-import { silentReRegister } from '@/notifications/setup';
+import { silentReRegister, wireNotificationRouting } from '@/notifications/setup';
 import { configurePurchases } from '@/purchases/revenuecat';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -32,18 +30,13 @@ export default function RootLayout() {
 
   const userId = useAuthStore((s) => s.userId);
 
-  // 푸시: 토큰 재등록(멱등) + 탭 라우팅 (실행 중/콜드 스타트 양 경로) + RevenueCat 초기화
+  // 푸시: 토큰 재등록(멱등) + 탭 라우팅 (실행 중/콜드 스타트 양 경로) + RevenueCat 초기화.
+  // expo-notifications는 Expo Go에서 import조차 불가 → setup.ts가 lazy 로드로 가드
   useEffect(() => {
     if (authStatus !== 'guest') return;
     silentReRegister();
     if (userId) configurePurchases(userId).catch(() => {});
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) setPendingDeepLink(handleNotificationResponse(response));
-    });
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      setPendingDeepLink(handleNotificationResponse(response));
-    });
-    return () => sub.remove();
+    return wireNotificationRouting(setPendingDeepLink);
   }, [authStatus, userId, setPendingDeepLink]);
 
   useEffect(() => {
